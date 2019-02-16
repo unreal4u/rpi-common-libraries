@@ -1,0 +1,25 @@
+{
+  "name": "unreal4u/rpi-common-libraries",
+  "description": "Common functionality I use for my rPi IoT automation tasks",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Camilo Sperberg",
+      "email": "me+mqtt@unreal4u.com",
+      "homepage": "https://github.com/unreal4u/rpi-common-libraries/graphs/contributors"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "unreal4u\\rpiCommonLibrary\\": "src"
+    }
+  },
+  "require": {
+    "php": ">=7.0",
+    "monolog/monolog": "~1.24",
+    "piphp/gpio": "~0.3",
+    "symfony/console": "~v4.2",
+    "symfony/lock": "~4.2",
+    "unreal4u/mqtt": "~1.0"
+  }
+}
