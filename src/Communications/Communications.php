@@ -16,5 +16,7 @@ abstract class Communications implements Contract
     {
         $this->logger = $logger;
         $this->internalName = $internalName;
+
+        $this->checkPrerequisites();
     }
 }

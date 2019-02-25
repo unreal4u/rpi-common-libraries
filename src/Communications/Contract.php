@@ -12,10 +12,18 @@ use Psr\Log\LoggerInterface;
 interface Contract {
     /**
      * CommunicationsContract constructor.
+     *
      * @param LoggerInterface $logger
      * @param string $internalName
      */
     public function __construct(LoggerInterface $logger, string $internalName);
+
+    /**
+     * Checks for prerequisites before being able to use this communication channel
+     *
+     * @return Contract
+     */
+    public function checkPrerequisites(): self;
 
     /**
      * Sending a message should always be possible given that we have a subject and a payload
