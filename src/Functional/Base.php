@@ -8,6 +8,8 @@ use Monolog\Handler\RotatingFileHandler;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Lock\Factory;
 use Symfony\Component\Lock\Lock;
 use Symfony\Component\Lock\Store\FlockStore;
@@ -15,7 +17,7 @@ use unreal4u\rpiCommonLibrary\Communications\Contract;
 use unreal4u\rpiCommonLibrary\Communications\MQTT\Operations;
 use unreal4u\rpiCommonLibrary\JobContract;
 
-abstract class Base extends Command {
+abstract class Base extends Command implements JobContract {
     /**
      * @var LoggerInterface
      */
@@ -31,6 +33,11 @@ abstract class Base extends Command {
      * @var Lock
      */
     private $lock;
+
+    /**
+     * @var \DateTimeImmutable
+     */
+    private $jobStartedAt;
 
     /**
      * Base constructor.
@@ -50,12 +57,14 @@ abstract class Base extends Command {
      * To be called before the job starts
      *
      * @return Base
+     * @throws \Exception
      */
     private function initializeJob(): self
     {
         $factory = new Factory(new FlockStore(sys_get_temp_dir()));
         $this->lock = $factory->createLock($this->internalName);
         $this->lock->acquire(true);
+        $this->jobStartedAt = new \DateTimeImmutable('now');
 
         return $this;
     }
@@ -73,28 +82,16 @@ abstract class Base extends Command {
     }
 
     /**
-     * @param JobContract $job
-     * @return Base
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @return self
+     * @throws \Exception
      */
-    final public function runJob(JobContract $job): self
+    final public function execute(InputInterface $input, OutputInterface $output): self
     {
-        $errors = [];
         $this->initializeJob();
 
-        // Run the actual job
-        try {
-            $job->runJob();
-        } catch (\Exception $e) {
-            $errors = $e->getMessage();
-        } finally {
-            if ($errors === []) {
-                $errors = $job->retrieveErrors();
-            }
-
-            if ($errors !== []) {
-                $this->logger->error('Failed running job', $errors);
-            }
-        }
+        // Execute job
 
         return $this->finishJob();
     }
