@@ -47,6 +47,7 @@ final class Operations extends Communications {
     private function createMQTTConnection(): self
     {
         if ($this->mqttClient !== null) {
+            // Return as early as possible if we already have made a connection
             return $this;
         }
 
@@ -69,23 +70,23 @@ final class Operations extends Communications {
     }
 
     /**
-     * @param string $topicName
+     * @param string $subject
      * @param string $payload
      * @return bool
      * @throws \unreal4u\MQTT\Exceptions\ServerClosedConnection
      */
-    public function sendMessage(string $topicName, string $payload): bool
+    public function sendMessage(string $subject, string $payload): bool
     {
         $this->createMQTTConnection();
-        $message = new Message($payload, new TopicName($topicName));
+        $message = new Message($payload, new TopicName($subject));
 
         // House rule: all last values sensor data MUST be retained by the broker
-        if (strpos($topicName, 'sensors/') === 0) {
+        if (strpos($subject, 'sensors/') === 0) {
             $message->setRetainFlag(true);
         }
 
         // House rule: all sent commands MUST be at least QoS lvl1 and be retained
-        if (strpos($topicName, 'commands') !== false) {
+        if (strpos($subject, 'commands') !== false) {
             $message
                 ->setQoSLevel(new QoSLevel(2))
                 ->setRetainFlag(true)

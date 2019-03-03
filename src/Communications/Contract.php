@@ -28,9 +28,9 @@ interface Contract {
     /**
      * Sending a message should always be possible given that we have a subject and a payload
      *
-     * @param string $topicName Subject or topicname or something similar
+     * @param string $subject Subject, topic name or something similar if it applies
      * @param string $payload The body of the message itself
      * @return bool Returns true on success, false otherwise
      */
-    public function sendMessage(string $topicName, string $payload): bool;
+    public function sendMessage(string $subject, string $payload): bool;
 }
