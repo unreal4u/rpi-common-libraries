@@ -33,7 +33,7 @@ final class Operations extends Communications {
     public function checkPrerequisites(): Contract
     {
         if (!defined('MQTT_HOST')) {
-            throw new \RuntimeException('A host must be provided');
+            throw new \RuntimeException('A MQTT host (constant \'MQTT_HOST\') must be provided');
         }
         $this->mqttHost = MQTT_HOST;
 
@@ -55,7 +55,7 @@ final class Operations extends Communications {
 
         $connect = new Connect();
         // For this application, a clientId can be totally random
-        $randomClientName = $this->internalName . '-' . crc32(time());
+        $randomClientName = $this->internalName . '-' . time();
         $this->logger->withName($randomClientName);
 
         $parameters = new Parameters(new ClientId($randomClientName), $this->mqttHost);

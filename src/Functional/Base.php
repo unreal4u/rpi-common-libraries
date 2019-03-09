@@ -41,16 +41,24 @@ abstract class Base extends Command implements JobContract {
 
     /**
      * Base constructor.
-     * @param string $name Must be the classname of the job we are instantiating
      */
-    final public function __construct($name = null)
+    final public function __construct()
     {
+        $name = get_class($this);
         $simpleName = substr(strrchr($name, '\\'), 1);
         parent::__construct($simpleName);
         $this->logger = new Logger($simpleName);
         $this->logger->pushHandler(new RotatingFileHandler('logs/' . $simpleName . '.log', 14));
+        $this->logger->info('++++ Initialized program ++++', ['internalName' => $name, 'simpleName' => $simpleName]);
+
         // Assign the original class to the internal caller
         $this->internalName = $name;
+    }
+
+    final public function __destruct()
+    {
+        // Let us know in the logs when and whether we have shut down gracefully
+        $this->logger->info('++++ Terminating program ++++', ['internalName' => $this->internalName]);
     }
 
     /**
@@ -90,9 +98,8 @@ abstract class Base extends Command implements JobContract {
     final public function execute(InputInterface $input, OutputInterface $output): self
     {
         $this->initializeJob();
-
-        // Execute job
-
+        $this->setUp();
+        $this->runJob();
         return $this->finishJob();
     }
 
