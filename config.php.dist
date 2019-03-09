@@ -1,5 +1,0 @@
-<?php
-
-if (!defined('MQTT_HOST')) {
-    define('MQTT_HOST', 'localhost');
-}
