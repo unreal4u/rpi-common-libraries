@@ -50,10 +50,22 @@ abstract class Base extends Command implements JobContract
         // This simpleName is also used to build the actual command name, maybe change this later on?
         parent::__construct($simpleName);
         $this->logger = new Logger($simpleName);
-        $this->logger->pushHandler(new RotatingFileHandler('logs/' . $simpleName . '.log', 14));
-        $this->uniqueIdentifier = uniqid($name, true);
+        $this->logger->pushHandler(
+            new RotatingFileHandler($this->getLogDirectory() . 'logs/' . $simpleName . '.log', 14)
+        );
+        $this->uniqueIdentifier = uniqid('', true);
         // Assign the original class to the internal caller
         $this->internalName = $name;
+    }
+
+    /**
+     * Returns the absolute path to the project directory
+     *
+     * @return string
+     */
+    private function getLogDirectory(): string
+    {
+        return substr(__DIR__, 0, strpos(__DIR__, 'vendor/'));
     }
 
     /**
@@ -85,7 +97,7 @@ abstract class Base extends Command implements JobContract
      */
     private function initializeJob(): self
     {
-        $this->logger->info('Trying to acquire lock');
+        $this->logger->info('Trying to acquire lock', ['uniqueIdentifier' => $this->getUniqueIdentifier()]);
         if ($this->lock($this->internalName) === false) {
             $this->logger->info('Lock could not be acquired!', ['uniqueIdentifier' => $this->getUniqueIdentifier()]);
             die(1);
