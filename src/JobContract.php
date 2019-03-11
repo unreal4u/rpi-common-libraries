@@ -24,11 +24,11 @@ interface JobContract {
     public function runJob(): bool;
 
     /**
-     * If method runJob returns false, this will return an array with errors that may have happened during execution
+     * If method runJob returns false, this will yield a list of errors that have happened during execution
      *
-     * @return array
+     * @return \Generator
      */
-    public function retrieveErrors(): array;
+    public function retrieveErrors(): \Generator;
 
     /**
      * The number of seconds after which this script should kill itself
@@ -43,4 +43,11 @@ interface JobContract {
      * @return int
      */
     public function executeEveryMicroseconds(): int;
+
+    /**
+     * Returns a unique identifier for this instance
+     *
+     * @return string
+     */
+    public function getUniqueIdentifier(): string;
 }

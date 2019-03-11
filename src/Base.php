@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace unreal4u\rpiCommonLibrary\Functional;
+namespace unreal4u\rpiCommonLibrary;
 
 use Monolog\Handler\RotatingFileHandler;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Command\LockableTrait;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Lock\Factory;
-use Symfony\Component\Lock\Lock;
-use Symfony\Component\Lock\Store\FlockStore;
 use unreal4u\rpiCommonLibrary\Communications\Contract;
 use unreal4u\rpiCommonLibrary\Communications\MQTT\Operations;
-use unreal4u\rpiCommonLibrary\JobContract;
 
-abstract class Base extends Command implements JobContract {
+abstract class Base extends Command implements JobContract
+{
+    use LockableTrait;
+
     /**
      * @var LoggerInterface
      */
@@ -30,9 +30,10 @@ abstract class Base extends Command implements JobContract {
     private $internalName;
 
     /**
-     * @var Lock
+     * Handy to know in the logs with which instance we are having logs of
+     * @var string
      */
-    private $lock;
+    private $uniqueIdentifier;
 
     /**
      * @var \DateTimeImmutable
@@ -46,19 +47,34 @@ abstract class Base extends Command implements JobContract {
     {
         $name = get_class($this);
         $simpleName = substr(strrchr($name, '\\'), 1);
+        // This simpleName is also used to build the actual command name, maybe change this later on?
         parent::__construct($simpleName);
         $this->logger = new Logger($simpleName);
         $this->logger->pushHandler(new RotatingFileHandler('logs/' . $simpleName . '.log', 14));
-        $this->logger->info('++++ Initialized program ++++', ['internalName' => $name, 'simpleName' => $simpleName]);
-
+        $this->uniqueIdentifier = uniqid($name, true);
         // Assign the original class to the internal caller
         $this->internalName = $name;
     }
 
+    /**
+     * Gets called each time the program exits normally
+     */
     final public function __destruct()
     {
         // Let us know in the logs when and whether we have shut down gracefully
-        $this->logger->info('++++ Terminating program ++++', ['internalName' => $this->internalName]);
+        $this->logger->info('++++ Terminating program ++++', [
+            'internalName' => $this->internalName,
+            'uniqueIdentifier' => $this->getUniqueIdentifier(),
+        ]);
+    }
+
+    /**
+     * @inheritdoc
+     * @return string
+     */
+    final public function getUniqueIdentifier(): string
+    {
+        return $this->uniqueIdentifier;
     }
 
     /**
@@ -69,22 +85,30 @@ abstract class Base extends Command implements JobContract {
      */
     private function initializeJob(): self
     {
-        $factory = new Factory(new FlockStore(sys_get_temp_dir()));
-        $this->lock = $factory->createLock($this->internalName);
-        $this->lock->acquire(true);
+        $this->logger->info('Trying to acquire lock');
+        if ($this->lock($this->internalName) === false) {
+            $this->logger->info('Lock could not be acquired!', ['uniqueIdentifier' => $this->getUniqueIdentifier()]);
+            die(1);
+        }
+
         $this->jobStartedAt = new \DateTimeImmutable('now');
+        $this->logger->info('++++ Initialized program ++++', [
+            'internalName' => $this->internalName,
+            'uniqueIdentifier' => $this->getUniqueIdentifier(),
+            'startDate' => $this->jobStartedAt,
+        ]);
 
         return $this;
     }
 
     /**
-     * To be called after the job ends, can be overwritten
+     * To be called after the job ends, can not be overwritten
      *
      * @return Base
      */
     private function finishJob(): self
     {
-        $this->lock->release();
+        $this->release();
 
         return $this;
     }
