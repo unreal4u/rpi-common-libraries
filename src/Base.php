@@ -128,7 +128,7 @@ abstract class Base extends Command implements JobContract
         $this->logger->debug('Trying to acquire lock', ['uniqueIdentifier' => $this->getUniqueIdentifier()]);
         if ($this->lock($this->internalName) === false) {
             $this->logger->debug('Lock could not be acquired, dying', ['uniqueIdentifier' => $this->getUniqueIdentifier()]);
-            $this->destructorLoggingEnabled = true;
+            $this->destructorLoggingEnabled = false;
             die(1);
         }
 
