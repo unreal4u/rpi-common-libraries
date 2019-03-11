@@ -41,21 +41,46 @@ abstract class Base extends Command implements JobContract
     private $jobStartedAt;
 
     /**
+     * Whether to omit the logging part of the destructor
+     * @var bool
+     */
+    private $destructorLoggingEnabled = true;
+
+    /**
      * Base constructor.
      */
     final public function __construct()
     {
-        $name = get_class($this);
-        $simpleName = substr(strrchr($name, '\\'), 1);
+        $this->internalName = get_class($this);
+        $simpleName = substr(strrchr($this->internalName, '\\'), 1);
         // This simpleName is also used to build the actual command name, maybe change this later on?
         parent::__construct($simpleName);
-        $this->logger = new Logger($simpleName);
-        $this->logger->pushHandler(
-            new RotatingFileHandler($this->getLogDirectory() . 'logs/' . $simpleName . '.log', 14)
-        );
+        $this->initializeLogger($simpleName);
+
         $this->uniqueIdentifier = uniqid('', true);
         // Assign the original class to the internal caller
-        $this->internalName = $name;
+    }
+
+    /**
+     * Initializes a logger with all options
+     *
+     * @param string $name
+     * @return Base
+     */
+    private function initializeLogger(string $name): self
+    {
+        $this->logger = new Logger($name);
+        // Have a debug channel
+        $this->logger->pushHandler(
+            new RotatingFileHandler($this->getLogDirectory() . 'logs/' . $name . '-debug.log', 14, Logger::DEBUG)
+        );
+
+        // And also a "normal" channel where only the most important stuff is logged
+        $this->logger->pushHandler(
+            new RotatingFileHandler($this->getLogDirectory() . 'logs/' . $name . '.log', 14, Logger::INFO)
+        );
+
+        return $this;
     }
 
     /**
@@ -73,11 +98,14 @@ abstract class Base extends Command implements JobContract
      */
     final public function __destruct()
     {
-        // Let us know in the logs when and whether we have shut down gracefully
-        $this->logger->info('++++ Terminating program ++++', [
-            'internalName' => $this->internalName,
-            'uniqueIdentifier' => $this->getUniqueIdentifier(),
-        ]);
+        // Only log this if a lock could be acquired
+        if ($this->destructorLoggingEnabled === true) {
+            // Let us know in the logs when and whether we have shut down gracefully
+            $this->logger->info('++++ Terminating program ++++', [
+                'internalName' => $this->internalName,
+                'uniqueIdentifier' => $this->getUniqueIdentifier(),
+            ]);
+        }
     }
 
     /**
@@ -97,9 +125,10 @@ abstract class Base extends Command implements JobContract
      */
     private function initializeJob(): self
     {
-        $this->logger->info('Trying to acquire lock', ['uniqueIdentifier' => $this->getUniqueIdentifier()]);
+        $this->logger->debug('Trying to acquire lock', ['uniqueIdentifier' => $this->getUniqueIdentifier()]);
         if ($this->lock($this->internalName) === false) {
-            $this->logger->info('Lock could not be acquired!', ['uniqueIdentifier' => $this->getUniqueIdentifier()]);
+            $this->logger->debug('Lock could not be acquired, dying', ['uniqueIdentifier' => $this->getUniqueIdentifier()]);
+            $this->destructorLoggingEnabled = true;
             die(1);
         }
 
