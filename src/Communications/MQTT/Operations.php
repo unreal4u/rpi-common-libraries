@@ -8,10 +8,12 @@ use unreal4u\MQTT\Client;
 use unreal4u\MQTT\DataTypes\ClientId;
 use unreal4u\MQTT\DataTypes\Message;
 use unreal4u\MQTT\DataTypes\QoSLevel;
+use unreal4u\MQTT\DataTypes\TopicFilter;
 use unreal4u\MQTT\DataTypes\TopicName;
 use unreal4u\MQTT\Protocol\Connect;
 use unreal4u\MQTT\Protocol\Connect\Parameters;
 use unreal4u\MQTT\Protocol\Publish;
+use unreal4u\MQTT\Protocol\Subscribe;
 use unreal4u\rpiCommonLibrary\Communications\Communications;
 use unreal4u\rpiCommonLibrary\Communications\Contract;
 
@@ -98,5 +100,25 @@ final class Operations extends Communications {
         $this->mqttClient->processObject($publish);
 
         return true;
+    }
+
+    /**
+     * Provides an interface for us to subscribe to a Topic and execute an action
+     *
+     * @param TopicFilter $topicFilter
+     * @param callable $execute
+     * @throws \unreal4u\MQTT\Exceptions\ServerClosedConnection
+     */
+    public function subscribeToTopic(TopicFilter $topicFilter, callable $execute): void
+    {
+        $this->createMQTTConnection();
+
+        $subscribe = new Subscribe();
+        $subscribe->addTopics($topicFilter);
+        // Handy function: a loop. This will yield any messages that arrive at the topic.
+        /** @var \unreal4u\MQTT\DataTypes\Message $message */
+        foreach ($subscribe->loop($this->mqttClient) as $message) {
+            $execute($message);
+        }
     }
 }

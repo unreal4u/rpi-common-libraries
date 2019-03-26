@@ -15,7 +15,7 @@
     }
   },
   "require": {
-    "php": ">=7.0",
+    "php": ">=7.1",
     "monolog/monolog": "~1.24",
     "symfony/console": "~4.2",
     "symfony/lock": "~4.2",
